@@ -1,0 +1,119 @@
+doctype html
+html
+  head
+    meta(charset='utf-8')
+    title 多媒体-人脸识别
+    link(rel='stylesheet', href='assets/demo.css')
+    script(src='/javascripts/tracking-min.js')
+    script(src='/javascripts/data/face-min.js')
+    script(src='/javascripts/data/eye-min.js')
+    script(src='/javascripts/data/mouth-min.js')
+    style.
+      .demo-container {
+        text-align: center;
+      }
+      .rect {
+        border: 2px solid #a64ceb;
+        left: -1000px;
+        position: absolute;
+        top: -1000px;
+      }
+      #tip {
+        text-align: center;
+        font-size: 15px;
+        padding: 10px 0 0;
+        background: #eee;
+      }
+      #img {
+        position: relative;
+        max-width: 100%;
+        max-height: 80%;
+        margin-top: 20px;
+      }
+      .file-filed {
+        position: absolute;
+        bottom: 5%;
+        left: 45%;
+      }
+      .file-beautify {
+        cursor: pointer;
+        padding: 5px 10px;
+        color: white;
+        background: #4b4b4b;
+        border-radius: 3px;
+        box-shadow: 1px 3px 10px #888;
+      }
+
+  body
+    .demo-title
+      p
+        多媒体项目--人脸识别 | 计算机三班 吴明达
+        a(class="link" href="/camera") 切换到摄像头识别
+
+    .demo-frame
+      p(id='tip')
+      .demo-container
+        img#img(src='assets/faces.jpg')
+        .file-filed
+          div
+            label(for='file' class='file-beautify')选择图片
+            input(type='file' id='file' style='display: none')
+    script.
+        var fileEle = document.querySelector('input#file');
+        // 用户选择图片并加载
+        fileEle.addEventListener('change', function(e) {
+            var file = this.files[0];
+            var src = URL.createObjectURL(file);
+            var imgEle = document.getElementById('img');
+            imgEle.src = src;
+            // 图片加载完毕后扫描图片
+            imgEle.onload = function() {
+                window.scan();
+            }
+        })
+    script.
+        window.onload = function() {
+
+          // 绘制头像识别框
+          window.plot = function(x, y, w, h) {
+            var rect = document.createElement('div');
+            document.querySelector('.demo-container').appendChild(rect);
+            rect.classList.add('rect');
+            rect.style.width = w + 'px';
+            rect.style.height = h + 'px';
+            rect.style.borderColor = "white";
+            rect.style.left = (img.offsetLeft + x) + 'px';
+            rect.style.top = (img.offsetTop + y) + 'px';
+          };
+          // 实例化
+          var img = document.getElementById('img');
+          var tracker = new tracking.ObjectTracker(['face']);
+          function scan() {
+              tracker.removeAllListeners();
+              // 初始化头像框
+              document.querySelectorAll('.rect').forEach(function(v) {v.remove()});
+              // 初始化提示框
+              document.querySelector("#tip").innerText = ("识别头像中...");
+              // 异步识别头像
+              setTimeout(function() {
+                tracker.setStepSize(1.5);
+                // 识别图中头像
+                tracking.track('#img', tracker);
+              }, 0)
+              // 监听头像识别的回调函数
+              tracker.on('track', function(event) {
+                var count = 0; // 记录头像总数
+                // 为每一个识别的头像添加头像框
+                event.data.forEach(function(rect) {
+                    window.plot(rect.x, rect.y, rect.width, rect.height);
+                    count++; // 记录头像个数
+                });
+                // 异步队列，在所有主线程任务执行完后显示头像个数
+                setTimeout(function() { document.querySelector("#tip").innerText = ("图中共有" + count + "个头像")}, 0)
+              });
+              window.t = tracker;
+          }
+          window.scan = scan;
+          // 监听头像
+          scan();
+        };
