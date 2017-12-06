@@ -66,3 +66,28 @@
   font-size: .8em;
   margin-left: 20px;
 }
+
+@media screen and (max-width: 768px) {
+    .demo-frame {
+        box-sizing: border-box;
+        width: 100%;
+        margin: 0;
+        top: 10px;
+        left: 0;
+        padding: 0;
+        padding-top: 70px;
+        background: #eee;
+    }
+    div.file-filed {
+        left: 40%;
+    }
+    .link {
+        display: inline-block;
+        margin: auto;
+        margin-top: 10px;
+        float: none;
+    }
+    p#tip {
+        padding-top: 15px;
+    }
+}
