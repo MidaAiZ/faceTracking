@@ -1,46 +1,38 @@
 (function() {
   /**
-   * Face Alignment via Regressing Local Binary Features (LBF)
-   * This approach has two components: a set of local binary features and
-   * a locality principle for learning those features.
-   * The locality principle is used to guide the learning of a set of highly
-   * discriminative local binary features for each landmark independently.
-   * The obtained local binary features are used to learn a linear regression
-   * that later will be used to guide the landmarks in the alignment phase.
-   * 
-   * @authors: VoxarLabs Team (http://cin.ufpe.br/~voxarlabs)
-   *           Lucas Figueiredo <lsf@cin.ufpe.br>, Thiago Menezes <tmc2@cin.ufpe.br>,
-   *           Thiago Domingues <tald@cin.ufpe.br>, Rafael Roberto <rar3@cin.ufpe.br>,
-   *           Thulio Araujo <tlsa@cin.ufpe.br>, Joao Victor <jvfl@cin.ufpe.br>,
-   *           Tomer Simis <tls@cin.ufpe.br>)
-   */
-  
+  * LBF(Local binary feature),基于局部二值特征的人脸特征点递，
+  * 该算法的核心工作主要有两部分，总体上采用了随机森林和全局线性回归相结合的方法，
+  * 相对于使用卷积神经的深度学习方法，LBF采用的算法是传统的机器学习方法。
+  * LBF采用了一种局部二值特征，该特征是对12年的Face Alignment by Shape Regression(ESR)算法提到的形状索引特征的改进，
+  * 从全局的索引特征升级为局部的二值索引特征，采用如下的公式表达：
+  * St = St-1 + Rt(I, St-1)
+  *
+  */
+
   /**
-   * Holds the maximum number of stages that will be used in the alignment algorithm.
-   * Each stage contains a different set of random forests and retrieves the binary
-   * code from a more "specialized" (i.e. smaller) region around the landmarks.
+   * 校准算法。
+   * 每个阶段包含一个不同的随机森林和retrieves二元。
    * @type {number}
    * @static
    */
   tracking.LBF.maxNumStages = 4;
 
   /**
-   * Holds the regressor that will be responsible for extracting the local features from 
-   * the image and guide the landmarks using the training data.
+   * 保存回归量，负责提取局部特征
+   * 利用训练数据对标记图像进行引导。
    * @type {object}
    * @protected
    * @static
    */
-  tracking.LBF.regressor_ = null; 
-  
+  tracking.LBF.regressor_ = null;
+
   /**
-   * Generates a set of landmarks for a set of faces
-   * @param {pixels} pixels The pixels in a linear [r,g,b,a,...] array.
-   * @param {number} width The image width.
-   * @param {number} height The image height.
-   * @param {array} faces The list of faces detected in the image
-   * @return {array} The aligned landmarks, each set of landmarks corresponding
-   *     to a specific face.
+   * 一系列对图片以及图片中脸部标记的变量
+   * @param {pixels} pixels 像素
+   * @param {number} width 图片宽度.
+   * @param {number} height 图片宽度.
+   * @param {array} faces 图片中检测到的人脸数组
+   * @return {array} The 对齐的图片坐标数组
    * @static
    */
   tracking.LBF.align = function(pixels, width, height, faces){
@@ -50,7 +42,7 @@
         tracking.LBF.maxNumStages
       );
     }
-// NOTE: is this thesholding suitable ? if it is on image, why no skin-color filter ? and a adaptative threshold
+// NOTE: 皮肤颜色过滤器 和自适应阈值
     pixels = tracking.Image.grayscale(pixels, width, height, false);
 
     pixels = tracking.Image.equalizeHist(pixels, width, height);
@@ -74,10 +66,10 @@
   }
 
   /**
-   * Unprojects the landmarks shape from the bounding box.
-   * @param {matrix} shape The landmarks shape.
-   * @param {matrix} boudingBox The bounding box.
-   * @return {matrix} The landmarks shape projected into the bounding box.
+   * 从图片选择区域中获取标记
+   * @param {matrix} shape 标记形状.
+   * @param {matrix} boudingBox 区域.
+   * @return {matrix} The
    * @static
    * @protected
    */
@@ -93,12 +85,11 @@
   }
 
   /**
-   * Projects the landmarks shape into the bounding box. The landmarks shape has
-   * normalized coordinates, so it is necessary to map these coordinates into
-   * the bounding box coordinates.
-   * @param {matrix} shape The landmarks shape.
-   * @param {matrix} boudingBox The bounding box.
-   * @return {matrix} The landmarks shape.
+   * 将标记形状投射到包围区域中。
+   * 地标形状有标准化标记，将这些标记映射到图片区域中
+   * @param {matrix} shape 标记形状
+   * @param {matrix} boudingBox 图片区域
+   * @return {matrix} The 区域
    * @static
    * @protected
    */
@@ -114,11 +105,9 @@
   }
 
   /**
-   * Calculates the rotation and scale necessary to transform shape1 into shape2.
-   * @param {matrix} shape1 The shape to be transformed.
-   * @param {matrix} shape2 The shape to be transformed in.
-   * @return {[matrix, scalar]} The rotation matrix and scale that applied to shape1
-   *     results in shape2.
+   * 计算旋转和尺度从而变换形状
+   * @param {matrix} shape1 将要变换的形状
+   * @param {matrix} shape2 变换后的形状
    * @static
    * @protected
    */
@@ -181,8 +170,18 @@
     return [rotation, scale];
   }
 
+  /*
+   * 在LBF算法中，使用了较为复杂的回归子预测形状，每一个预测单元使用随机树，并且使用随机森林来预测形状变化。
+   * 其次，LBF算法并没有采用随机树叶子节点的形状作为预测输出，
+   * 而是将随机森林的输出组成一种特征（这里也就是LBF），并用LBF来做预测，
+   * 除了采用随机森林的结构做预测，LBF还针对每个关键点给出一个随机森林来做预测，
+   * 并将所有关键点对应的随机森林输出的局部特征相互联系起来，称作为局部二值特征，
+   * 然后利用这个局部二值特征做全局回归，来预测形状变化量。
+   */
+
+
   /**
-   * LBF Random Forest data structure.
+   * LBF随机森林的数据结构。
    * @static
    * @constructor
    */
@@ -190,7 +189,7 @@
     this.maxNumTrees = tracking.LBF.RegressorData[forestIndex].max_numtrees;
     this.landmarkNum = tracking.LBF.RegressorData[forestIndex].num_landmark;
     this.maxDepth = tracking.LBF.RegressorData[forestIndex].max_depth;
-    this.stages = tracking.LBF.RegressorData[forestIndex].stages; 
+    this.stages = tracking.LBF.RegressorData[forestIndex].stages;
 
     this.rfs = new Array(this.landmarkNum);
     for(var i=0; i < this.landmarkNum; i++){
@@ -202,10 +201,11 @@
   }
 
   /**
-   * LBF Tree data structure.
+   * LBF树数据结构。
    * @static
    * @constructor
    */
+
   tracking.LBF.Tree = function(forestIndex, landmarkIndex, treeIndex){
     var data = tracking.LBF.RegressorData[forestIndex].landmarks[landmarkIndex][treeIndex];
     this.maxDepth = data.max_depth;

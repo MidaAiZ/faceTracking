@@ -90,4 +90,7 @@
     p#tip {
         padding-top: 15px;
     }
+    .iframe-container iframe {
+        margin-top: -18%;
+    }
 }
